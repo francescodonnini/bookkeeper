@@ -389,8 +389,8 @@ public class WriteCachePutTest {
         WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
         ByteBuf buf = Unpooled.buffer(n + 1);
         ByteBufferUtils.populate(buf, n + 1);
-        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
-        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+        Assertions.assertFalse(sut.put(ledgerId, entryId, buf));
+        assertUnsuccessfulInsertion(sut, oldState);
     }
 
     private void assertUnsuccessfulInsertion(WriteCache cache, WriteCacheVisibleState old) {
