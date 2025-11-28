@@ -6,171 +6,402 @@ import io.netty.buffer.Unpooled;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
-import java.nio.charset.Charset;
-import java.util.Arrays;
-
 public class WriteCachePutTest {
-    private static class WriteCacheVisibleState {
-        private final long size;
-        private final long count;
-        private final boolean empty;
-
-        public WriteCacheVisibleState(WriteCache cache) {
-            this(cache.size(), cache.count(), cache.isEmpty());
-        }
-
-        public WriteCacheVisibleState(long size, long count, boolean empty) {
-            this.size = size;
-            this.count = count;
-            this.empty = empty;
-        }
-
-        public void assertEquals(WriteCache actual) {
-            Assertions.assertEquals(size, actual.size());
-            Assertions.assertEquals(count, actual.count());
-            Assertions.assertEquals(empty, actual.isEmpty());
-        }
-
-        public void assertSuccessfulInsertion(WriteCache cache, long entrySize) {
-            Assertions.assertEquals(size + entrySize, cache.size());
-            Assertions.assertEquals(count + 1, cache.count());
-            Assertions.assertFalse(cache.isEmpty());
-        }
-    }
-
     private final ByteBufAllocator allocator = ByteBufAllocator.DEFAULT;
 
-    /**
-     * test0 - ((-1, 0, bytes(n)), IllegalArgumentException)
-     * This test should fail because the cache doesn't accept an entry whose key contains a negative number.
-     */
-    @Test
-    public void test0() {
-        WriteCache sut = new WriteCache(allocator, 8192, 2048);
-        assertEmptyCache(sut);
-        ByteBuf buf = Unpooled.buffer(1024);
-        buf.writeCharSequence("This test should fail because ledgerId < 0!", Charset.forName("UTF-8"));
-        Assertions.assertThrows(IllegalArgumentException.class, () -> sut.put(-1, 0, buf));
-        assertEmptyCache(sut);
-    }
-
-    /**
-     * test1 - ((42, -1, bytes(n)), IllegalArgumentException)
-     * This test should fail because the cache doesn't accept an entry whose key contains a negative number
-     */
     @Test
     public void test1() {
-        WriteCache sut = new WriteCache(allocator, 8192, 2048);
-        assertEmptyCache(sut);
-        ByteBuf buf = Unpooled.buffer(1024);
-        buf.writeCharSequence("This test should fail because entry is null!", Charset.forName("UTF-8"));
-        Assertions.assertThrows(IllegalArgumentException.class, () -> sut.put(42, -1, buf));
-        assertEmptyCache(sut);
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        ByteBuf buf = Unpooled.buffer(27);
+        ByteBufferUtils.populate(buf, 27);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> sut.put(-1, 0, buf));
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
     }
 
-    /**
-     * test2 - ((0, 1, null), IllegalArgumentException)
-     * This test should fail because the cache doesn't accept a null entry
-     */
     @Test
     public void test2() {
-        WriteCache sut = new WriteCache(allocator, 8192, 2048);
-        assertEmptyCache(sut);
-        Assertions.assertThrows(IllegalArgumentException.class, () -> sut.put(0, 1, null));
-        assertEmptyCache(sut);
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(4 * 1024 * 1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(512)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(8);
+        ByteBufferUtils.populate(buf, 8);
+        Assertions.assertThrows(IllegalArgumentException.class, () -> sut.put(0, -1, buf));
+        oldState.assertEquals(sut);
     }
 
-    /**
-     *
-     */
     @Test
     public void test3() {
-        int maxCacheSize = 8192;
-        int maxSegmentSize = 2048;
-        int fillSize = 1536;
-        WriteCache sut = new WriteCache(allocator, maxCacheSize, maxSegmentSize);
-        int ledgerId = 0;
-        int entryId = 0;
-        createNonEmptyCache(sut, 2048, ledgerId, entryId, fillSize);
-        WriteCacheVisibleState state = new WriteCacheVisibleState(sut);
+        WriteCache sut = WriteCacheBuilder.builder()
+                    .allocator(allocator)
+                    .maxCacheSize(2 * 1024 * 1024)
+                    .maxSegmentSize(1024)
+                    .currentSegmentNumber(3)
+                    .currentSegmentSize(0)
+                    .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        Assertions.assertThrows(NullPointerException.class, () -> sut.put(0, 0, null));
+        oldState.assertEquals(sut);
+    }
 
-        int n = 1024;
-        byte[] data = new byte[n];
-        Arrays.fill(data, (byte) 42);
-        ByteBuf buf = Unpooled.wrappedBuffer(data);
+    @Test
+    public void test4() {
+        final long ledgerId = 0;
+        final long entryId = 0;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(2 * 1024 * 1024)
+                .maxSegmentSize(1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(64);
+        ByteBufferUtils.populate(buf, 64);
         Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
-        assertSuccessfulInsertion(sut, state, ledgerId, entryId, data);
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
     }
 
-    private void test4() {
-        int maxCacheSize = 4 * 1024 * 1024 * 1024;
-        int maxSegmentSize = 1024 * 1024 * 1024;
-        int fillSize = 805306368;
-        WriteCache sut = new WriteCache(allocator, maxCacheSize, maxSegmentSize);
-        createNonEmptyCache(sut, maxSegmentSize, 0, 0, fillSize);
-        WriteCacheVisibleState initialState = new WriteCacheVisibleState(sut);
-        int n = 512 * 1024 * 1024;
-        byte[] data = new byte[n];
-        for (int i = 0; i < n; i++) {
-            data[i] = (byte) 42;
-        }
-        ByteBuf buf = Unpooled.wrappedBuffer(data);
-        int ledgerId = Integer.MAX_VALUE;
-        int entryId = Integer.MAX_VALUE;
+    @Test
+    public void test5() {
+        final long ledgerId = 194;
+        final long entryId = 123;
+        final int maxSegmentSize = 2 * 1024;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(4 * 1024 * 1024)
+                .maxSegmentSize(maxSegmentSize)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(maxSegmentSize);
+        ByteBufferUtils.populate(buf, maxSegmentSize);
         Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
-        assertSuccessfulInsertion(sut, initialState, ledgerId, entryId, data);
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
     }
 
-    private int createNonEmptyCache(WriteCache cache, int maxSegmentSize, int ledgerId, int startEntryId, int fillSize) {
-        ByteBuf buf = Unpooled.buffer(Math.min(maxSegmentSize, fillSize));
-        int i = 0;
-        while (fillSize > 0) {
-            int n = Math.min(maxSegmentSize, fillSize);
-            for (int j = 0; j < n; ++j) {
-                buf.writeByte((byte) 42);
-            }
-            cache.put(ledgerId, startEntryId + i, buf);
-            fillSize -= n;
-            buf.resetReaderIndex();
-            i++;
-        }
-        return i;
+    @Test
+    public void test6() {
+        final long ledgerId = Long.MAX_VALUE;
+        final long entryId = 42;
+        final int n = 1024 + 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n);
+        ByteBufferUtils.populate(buf, n);
+        Assertions.assertFalse(sut.put(ledgerId, entryId, buf));
+        assertUnsuccessfulInsertion(sut, oldState);
     }
 
-    private void assertDuplicatedInsertion(WriteCache cache, WriteCacheVisibleState old, int ledgerId, int entryId) {
+    @Test
+    public void test7() {
+        final long ledgerId = 1;
+        final long entryId = 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(22 * 1024 * 1024)
+                .maxSegmentSize(4 * 1024)
+                .currentSegmentNumber(2)
+                .currentSegmentSize(0)
+                .include(ledgerId, entryId)
+                .build();
+
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(4 * 1024);
+        ByteBufferUtils.populate(buf, 4 * 1024);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test8() {
+        final long ledgerId = 13;
+        final long entryId = 17;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(512)
+                .include(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(64);
+        ByteBufferUtils.populate(buf, 64);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test9() {
+        final long ledgerId = 33;
+        final long entryId = Long.MAX_VALUE;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(16 * 1024)
+                .maxSegmentSize(1024)
+                .currentSegmentNumber(3)
+                .currentSegmentSize(512)
+                .include(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(512);
+        ByteBufferUtils.populate(buf, 512);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test10() {
+        final long ledgerId = 5;
+        final long entryId = 5;
+        final int n = 1024 * 1024 + 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024 * 1024)
+                .currentSegmentNumber(8)
+                .currentSegmentSize(0)
+                .include(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n);
+        ByteBufferUtils.populate(buf, n);
+        Assertions.assertFalse(sut.put(ledgerId, entryId, buf));
+        assertUnsuccessfulInsertion(sut, oldState);
+    }
+
+    @Test
+    public void test11() {
+        final long ledgerId = 51;
+        final long entryId = 15;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(128)
+                .exclude(51, 15)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(64);
+        ByteBufferUtils.populate(buf, 64);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test12() {
+        final long ledgerId = 500;
+        final long entryId = 2345;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(16 * 1024)
+                .maxSegmentSize(1024)
+                .currentSegmentNumber(8)
+                .currentSegmentSize(128)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(896);
+        ByteBufferUtils.populate(buf, 896);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test13() {
+        final long ledgerId = 0;
+        final long entryId = Long.MAX_VALUE;
+        final int n = 519 * 1024 + 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024 * 1024)
+                .currentSegmentNumber(8)
+                .currentSegmentSize(517 * 1024)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n);
+        ByteBufferUtils.populate(buf, n);
+        Assertions.assertFalse(sut.put(ledgerId, entryId, buf));
+        assertUnsuccessfulInsertion(sut, oldState);
+    }
+
+    @Test
+    public void test14() {
+        final long ledgerId = 0;
+        final long entryId = 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(8 * 1024 * 1024)
+                .maxSegmentSize(1024 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(1024);
+        ByteBufferUtils.populate(buf, 1024);
+        Assertions.assertTrue(sut.put(ledgerId, entryId + 1, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId + 1, buf.array());
+        ByteBuf buf2 = Unpooled.buffer(1024);
+        ByteBufferUtils.populate(buf2, 1024);
+        WriteCacheVisibleState oldState2 = new WriteCacheVisibleState(sut);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf2));
+        assertSuccessfulInsertion(sut, oldState2, ledgerId, entryId, buf2.array());
+    }
+
+    @Test
+    public void test15() {
+        final long ledgerId = 0;
+        final long entryId = 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(512);
+        ByteBufferUtils.populate(buf, 512);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test16() {
+        final long ledgerId = Long.MAX_VALUE - 1;
+        final long entryId = 12;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(1024);
+        ByteBufferUtils.populate(buf, 1024);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test17() {
+        final long ledgerId = 13;
+        final long entryId = Long.MAX_VALUE - 1;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(0)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheAssertionUtils.assertEmptyCache(sut);
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(1025);
+        ByteBufferUtils.populate(buf, 1025);
+        Assertions.assertFalse(sut.put(ledgerId, entryId, buf));
+        assertUnsuccessfulInsertion(sut, oldState);
+    }
+
+    @Test
+    public void test18() {
+        final long ledgerId = 13;
+        final long entryId = Long.MAX_VALUE - 1;
+        final int n = 82;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(64)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n);
+        ByteBufferUtils.populate(buf, n);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test19() {
+        final long ledgerId = 13;
+        final long entryId = Long.MAX_VALUE - 1;
+        final int n = 960;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(64)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n);
+        ByteBufferUtils.populate(buf, n);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    @Test
+    public void test20() {
+        final long ledgerId = 131313;
+        final long entryId = 0;
+        final int n = 960;
+        WriteCache sut = WriteCacheBuilder.builder()
+                .allocator(allocator)
+                .maxCacheSize(1024)
+                .maxSegmentSize(2 * 1024)
+                .currentSegmentNumber(1)
+                .currentSegmentSize(64)
+                .exclude(ledgerId, entryId)
+                .build();
+        WriteCacheVisibleState oldState = new WriteCacheVisibleState(sut);
+        ByteBuf buf = Unpooled.buffer(n + 1);
+        ByteBufferUtils.populate(buf, n + 1);
+        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
+        assertSuccessfulInsertion(sut, oldState, ledgerId, entryId, buf.array());
+    }
+
+    private void assertUnsuccessfulInsertion(WriteCache cache, WriteCacheVisibleState old) {
         old.assertEquals(cache);
-
     }
 
-    private void assertSuccessfulInsertion(WriteCache cache, WriteCacheVisibleState old, int ledgerId, int entryId, byte[] data) {
-        old.assertSuccessfulInsertion(cache, ledgerId);
+    private void assertSuccessfulInsertion(WriteCache cache, WriteCacheVisibleState old, long ledgerId, long entryId, byte[] data) {
+        old.assertSuccessfulInsertion(cache, data.length);
         ByteBuf expected = Unpooled.wrappedBuffer(data);
         ByteBuf lastEntry = cache.getLastEntry(ledgerId);
         Assertions.assertEquals(expected, lastEntry);
         Assertions.assertEquals(expected, cache.get(ledgerId, entryId));
-    }
-
-    @Test
-    public void test() {
-        WriteCache sut = new WriteCache(allocator, 4096);
-        assertEmptyCache(sut);
-        final long ledgerId = 0;
-        final long entryId = 0;
-        ByteBuf buf = Unpooled.buffer(1024);
-        String entryData = "Hello World!";
-        int n = buf.writeCharSequence(entryData, Charset.forName("UTF-8"));
-        Assertions.assertTrue(sut.put(ledgerId, entryId, buf));
-        Assertions.assertEquals(1, sut.count());
-        Assertions.assertEquals(n, sut.size());
-        ByteBuf lastEntry = sut.getLastEntry(ledgerId);
-        Assertions.assertEquals(entryData, lastEntry.toString(Charset.forName("UTF-8")));
-        ByteBuf actual = sut.get(ledgerId, entryId);
-        Assertions.assertEquals(entryData, actual.toString(Charset.forName("UTF-8")));
-    }
-
-    private void assertEmptyCache(WriteCache sut) {
-        Assertions.assertTrue(sut.isEmpty());
-        Assertions.assertEquals(0, sut.count());
-        Assertions.assertEquals(0, sut.size());
     }
 }

@@ -376,5 +376,75 @@
         </plugins>
       </build>
     </profile>
+
+    <!-- Jacoco -->
+    <profile>
+      <id>jacoco</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.14</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+                <configuration>
+                  <destFile>${project.build.directory}/jacoco.exec</destFile>
+                </configuration>
+              </execution>
+              <!-- attached to Maven test phase -->
+              <execution>
+                <id>report</id>
+                <phase>test</phase>
+                <goals>
+                  <goal>report</goal>
+                </goals>
+                <configuration>
+                  <dataFile>${project.build.directory}/jacoco.exec</dataFile>
+                  <outputDirectory>${project.reporting.outputDirectory}/jacoco</outputDirectory>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>@{argLine}</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- PIT -->
+    <profile>
+      <id>pit</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>1.22.0</version>
+            <configuration>
+              <targetClasses>org.apache.bookkeeper.bookie.storage.ldb.*</targetClasses>
+              <targetTests>
+                <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCachePutTest</targetTest>
+              </targetTests>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>@{argLine}</argLine>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 </project>
