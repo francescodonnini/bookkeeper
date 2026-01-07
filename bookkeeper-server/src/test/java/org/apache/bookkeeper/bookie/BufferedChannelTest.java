@@ -3,6 +3,7 @@ package org.apache.bookkeeper.bookie;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -11,6 +12,7 @@ import java.io.*;
 import java.nio.channels.FileChannel;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Stream;
 
@@ -51,13 +53,13 @@ public class BufferedChannelTest {
 
     private static Stream<Arguments> newInputs() {
         return Stream.of(
-//                Arguments.of(0, 1, 0, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 1, 2, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 1, 1024, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 666, 667, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 1, 2, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 0, 1, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
-//                Arguments.of(0, 0, 1125, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 1, 0, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 1, 2, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 1, 1024, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 666, 667, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 1, 2, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 0, 1, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
+                Arguments.of(0, 0, 1125, "rw-rw-r--", setOf(StandardOpenOption.WRITE)),
                 // This test seems to make BufferedChannel stuck on an infinite loop
                 Arguments.of(666, 0, 667, "rw-rw-r--", setOf(StandardOpenOption.WRITE))
         );
@@ -82,15 +84,16 @@ public class BufferedChannelTest {
     }
 
     private void parametricSingleWriteTest(int unpersistedByteBound, int writeCapacity, ByteBuf src, int writableBytes, Path path, Set<OpenOption> options) throws IOException {
+        String summary = "unpersistedByteBound=" + unpersistedByteBound + ", writeCapacity=" + writeCapacity + ", n=" + writableBytes;
         Integer flushedBytes = null;
         Long oldFileChannelPosition = null;
         try (FileChannel channel = FileChannel.open(path, options);
              BufferedChannel b = new BufferedChannel(ByteBufAllocator.DEFAULT, channel, writeCapacity, unpersistedByteBound)) {
             BufferedChannelState old = BufferedChannelState.of(b);
 
-            b.write(src);
+            Assertions.assertTimeoutPreemptively(Duration.ofSeconds(10), () -> b.write(src), testFailed(summary));
 
-            Assertions.assertEquals(old.getPosition() + writableBytes, b.position());
+            Assertions.assertEquals(old.getPosition() + writableBytes, b.position(), testFailed(summary));
             if (shouldFlush(writableBytes, writeCapacity, unpersistedByteBound)) {
                 int bufferedBytes;
                 if (unpersistedByteBound > 0) {
@@ -101,12 +104,13 @@ public class BufferedChannelTest {
                 flushedBytes = writableBytes - bufferedBytes;
                 Assertions.assertEquals(
                         old.getFileChannelPosition() + flushedBytes,
-                        b.getFileChannelPosition());
+                        b.getFileChannelPosition(),
+                        testFailed(summary));
                 oldFileChannelPosition = old.getFileChannelPosition();
             } else {
-                Assertions.assertEquals(old.getFileChannelPosition(), b.getFileChannelPosition());
-                Assertions.assertEquals(old.getNumOfBytesInWriteBuffer() + writableBytes, b.getNumOfBytesInWriteBuffer());
-                Assertions.assertEquals(old.getUnpersistedBytes() + writableBytes, b.getUnpersistedBytes());
+                Assertions.assertEquals(old.getFileChannelPosition(), b.getFileChannelPosition(), testFailed(summary));
+                Assertions.assertEquals(old.getNumOfBytesInWriteBuffer() + writableBytes, b.getNumOfBytesInWriteBuffer(), testFailed(summary));
+                Assertions.assertEquals(old.getUnpersistedBytes() + writableBytes, b.getUnpersistedBytes(), testFailed(summary));
             }
         }
 
@@ -115,6 +119,10 @@ public class BufferedChannelTest {
             Assertions.assertNotNull(flushedBytes);
             checkUnderlyingFile(path, oldFileChannelPosition.intValue(), flushedBytes, src);
         }
+    }
+
+    private static String testFailed(String summary) {
+        return String.format("Test %s failed", summary);
     }
 
     private boolean shouldFlush(int writeBytes, int writeCapacity, int unpersistedByteBound) {
