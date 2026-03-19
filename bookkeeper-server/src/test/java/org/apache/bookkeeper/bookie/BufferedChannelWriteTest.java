@@ -101,17 +101,18 @@ public class BufferedChannelWriteTest {
             bc.write(src);
 
             if (writeBufferSize + data.length >= writeCapacity || (unpersistedBytesBound > 0 && unpersistedBytes + data.length >= unpersistedBytesBound)) {
-                ByteBuffer actual = ByteBuffer.allocate(data.length);
-                int br = fc.read(actual, filePosition);
-                Assertions.assertArrayEquals(Arrays.copyOfRange(data, 0, br), Arrays.copyOfRange(actual.array(), 0, br));
-            } else {
-                ByteBuf actual = ByteBufAllocator.DEFAULT.buffer(data.length);
-                bc.read(actual, position);
-                Assertions.assertEquals(data.length, actual.readableBytes());
-                for (int i = 0; i < data.length; i++) {
-                    Assertions.assertEquals(data[i], actual.getByte(i));
-                }
+                ByteBuffer fileBuffer = ByteBuffer.allocate(data.length);
+                int br = fc.read(fileBuffer, filePosition);
+                Assertions.assertArrayEquals(Arrays.copyOfRange(data, 0, br), Arrays.copyOfRange(fileBuffer.array(), 0, br));
             }
+
+            ByteBuf actual = ByteBufAllocator.DEFAULT.buffer(data.length);
+            bc.read(actual, position);
+            Assertions.assertEquals(data.length, actual.readableBytes());
+            for (int i = 0; i < data.length; i++) {
+                Assertions.assertEquals(data[i], actual.getByte(i));
+            }
+
             Assertions.assertEquals(position + data.length, bc.position());
         } finally {
             Files.delete(path);
