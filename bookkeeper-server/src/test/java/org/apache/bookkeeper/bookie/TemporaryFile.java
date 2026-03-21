@@ -20,6 +20,10 @@ public class TemporaryFile {
         return path;
     }
 
+    public static Path create(String name, boolean writable) throws IOException {
+        return create(name, writable ? "rw-rw-r--" : "r--r--r--");
+    }
+
     public static Path create(String name, String permissions) throws IOException {
         return Files.createTempFile(name, null, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(permissions)));
     }

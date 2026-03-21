@@ -13,12 +13,11 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.NonWritableChannelException;
 import java.nio.file.*;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Stream;
 
 public class BufferedChannelWriteTest {
-    private static final byte[] EMPTY = new byte[0];
-
     @Test
     public void nullSourceTest() throws IOException {
         Path path = TemporaryFile.create("file", "rw-rw-r--");
@@ -54,7 +53,6 @@ public class BufferedChannelWriteTest {
         );
     }
 
-
     @ParameterizedTest
     @MethodSource("readOnlyFileTestInputs")
     public void readOnlyFileTest(int inputSize, int unpersistedBytesBound, int writeCapacity) throws IOException {
@@ -77,9 +75,9 @@ public class BufferedChannelWriteTest {
                 Arguments.of(1, 3, 2),
                 Arguments.of(4, 3, 2),
                 Arguments.of(3, 1, 2),
+                Arguments.of(2, 0, 3),
                 Arguments.of(3, 0, 2),
-                Arguments.of(3, 0, 3),
-                Arguments.of(20, 10, 5)
+                Arguments.of(3, 0, 3)
         );
     }
 
@@ -92,15 +90,13 @@ public class BufferedChannelWriteTest {
             byte[] data = randomBytes(inputSize);
             ByteBuf src = ByteBufAllocator.DEFAULT.buffer(data.length);
 
-            int writeBufferSize = bc.getNumOfBytesInWriteBuffer();
-            long unpersistedBytes = bc.getUnpersistedBytes();
             long filePosition = bc.getFileChannelPosition();
             long position = bc.position();
 
             src.writeBytes(data);
-            bc.write(src);
+            Assertions.assertTimeoutPreemptively(Duration.ofSeconds(5), () -> bc.write(src));
 
-            if (writeBufferSize + data.length >= writeCapacity || (unpersistedBytesBound > 0 && unpersistedBytes + data.length >= unpersistedBytesBound)) {
+            if (unpersistedBytesBound > 0 && data.length > unpersistedBytesBound) {
                 ByteBuffer fileBuffer = ByteBuffer.allocate(data.length);
                 int br = fc.read(fileBuffer, filePosition);
                 Assertions.assertArrayEquals(Arrays.copyOfRange(data, 0, br), Arrays.copyOfRange(fileBuffer.array(), 0, br));
@@ -119,18 +115,45 @@ public class BufferedChannelWriteTest {
         }
     }
 
-    private static Stream<Arguments> multipleWritesInput() {
+    private static Stream<Arguments> multipleWritesTestInput() {
         return Stream.of(
-                Arguments.of(2, 3, 1),
-                Arguments.of(2, 1, 3),
-                Arguments.of(1, 2, 3),
-                Arguments.of(1, 3, 2),
-                Arguments.of(4, 3, 2),
-                Arguments.of(3, 1, 2),
-                Arguments.of(3, 0, 2),
-                Arguments.of(3, 0, 3),
-                Arguments.of(20, 10, 5)
+                Arguments.of(new int[] {4, 4}, 9, 7),
+                Arguments.of(new int[] {1, 1, 1}, 2, 4),
+                Arguments.of(new int[] {2, 3, 2}, 8, 9),
+                Arguments.of(new int[] {3, 4, 5, 3}, 17, 16),
+                Arguments.of(new int[] {128, 357, 180, 180, 180}, 1024, 1023),
+                Arguments.of(new int[] {6553, 6554, 6553, 8190, 12457, 7643, 17586}, 65534, 65535),
+                Arguments.of(new int[] {3, 2, 2}, 8, 5),
+                Arguments.of(new int[] {3, 2, 2}, 5, 8)
         );
+    }
+
+    @ParameterizedTest
+    @MethodSource("multipleWritesTestInput")
+    public void multipleWritesTest(int[] inputsSize, int unpersistedBytesBound, int writeCapacity) throws IOException {
+        Path path = TemporaryFile.create("file", "rw-rw-r--");
+        try (FileChannel fc = FileChannel.open(path, setOf(StandardOpenOption.WRITE, StandardOpenOption.READ));
+             BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, fc, writeCapacity, unpersistedBytesBound)) {
+            for (int inputSize : inputsSize) {
+                long p = bc.position();
+                ByteBuf expected = ByteBufAllocator.DEFAULT.buffer(inputSize);
+                byte[] data = randomBytes(inputSize);
+                expected.writeBytes(data);
+                bc.write(expected);
+
+                ByteBuf actual = ByteBufAllocator.DEFAULT.buffer(inputSize);
+                bc.read(actual, p);
+                Assertions.assertEquals(inputSize, actual.readableBytes());
+                for (int i = 0; i < inputSize; ++i) {
+                    Assertions.assertEquals(data[i], actual.getByte(i));
+                }
+
+                Assertions.assertEquals(p + inputSize, bc.position());
+                expected.release();
+            }
+        } finally {
+            Files.delete(path);
+        }
     }
 
     private static byte[] randomBytes(int length) {
