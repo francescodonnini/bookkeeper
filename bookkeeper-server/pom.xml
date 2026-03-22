@@ -427,7 +427,6 @@
         </plugins>
       </build>
     </profile>
-
     <!-- PIT -->
     <profile>
       <id>pit</id>
@@ -462,6 +461,7 @@
         </plugins>
       </build>
     </profile>
+    <!-- PIT for BufferedChannel only -->
     <profile>
       <id>pitb</id>
       <build>
@@ -493,6 +493,7 @@
         </plugins>
       </build>
     </profile>
+    <!-- PIT for WriteCache only -->
     <profile>
       <id>pitw</id>
       <build>
