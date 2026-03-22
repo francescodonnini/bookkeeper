@@ -201,64 +201,52 @@ public class BufferedChannelWriteTest {
         return set;
     }
 
-    @Test
-    public void writeCapacityBoundaryTest() throws IOException {
-        Path path = TemporaryFile.create("file", "rw-rw-r--");
-        int capacity = 10;
-        try (FileChannel fc = FileChannel.open(path, setOf(StandardOpenOption.WRITE, StandardOpenOption.READ));
-             BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, fc, capacity)) {
-            byte[] data1 = randomBytes(capacity);
-            ByteBuf src1 = ByteBufAllocator.DEFAULT.buffer(capacity);
-            src1.writeBytes(data1);
-            bc.write(src1);
-
-            Assertions.assertEquals(capacity, bc.position());
-
-            byte[] data2 = randomBytes(1);
-            ByteBuf src2 = ByteBufAllocator.DEFAULT.buffer(1);
-            src2.writeBytes(data2);
-            bc.write(src2);
-
-            Assertions.assertEquals(capacity + 1, bc.position());
-
-            ByteBuf actual = ByteBufAllocator.DEFAULT.buffer(capacity + 1);
-            bc.read(actual, 0);
-            Assertions.assertEquals(capacity + 1, actual.readableBytes());
-            src1.release();
-            src2.release();
-            actual.release();
-        } finally {
-            Files.delete(path);
-        }
+    private static Stream<Arguments> ioForceTestInputs() {
+        return Stream.of(
+                Arguments.of(11, 10, ints(4, 4, 2)),
+                Arguments.of(19, 20, ints(8, 8, 5)),
+                Arguments.of(19, 20, ints(8, 8, 3)),
+                Arguments.of(9, 10, ints(4, 4, 1))
+        );
     }
 
-    @Test
-    public void unpersistedBytesBoundTest() throws IOException {
+    @ParameterizedTest
+    @MethodSource("ioForceTestInputs")
+    public void ioForceTest(int writeCapacity, int unpersistedBytesBound, int[] inputSize) throws IOException {
         Path path = TemporaryFile.create("file", "rw-rw-r--");
-        int writeCapacity = 20;
-        int unpersistedBytesBound = 10;
         FileChannel fc = FileChannel.open(path, setOf(StandardOpenOption.WRITE, StandardOpenOption.READ));
+        int totalSize = Arrays.stream(inputSize).sum();
+        byte[] data = new byte[totalSize];
         try (FileChannel mock = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, mock, writeCapacity, unpersistedBytesBound)) {
-            ByteBuf src1 = ByteBufAllocator.DEFAULT.buffer(4);
-            src1.writeBytes(randomBytes(4));
-            bc.write(src1);
 
-            Assertions.assertTrue(bc.getUnpersistedBytes() < unpersistedBytesBound);
-            verify(mock, never()).force(anyBoolean());
+            int forceCount = 0;
+            int bytesWritten = 0;
+            int flushedBytes = 0;
+            int unpersistedBytes = 0;
+            for (int size : inputSize) {
+                ByteBuf src = ByteBufAllocator.DEFAULT.buffer(size);
+                byte[] bytes = randomBytes(size);
+                System.arraycopy(bytes, 0, data, bytesWritten, size);
+                src.writeBytes(bytes);
+                bc.write(src);
+                unpersistedBytes += size;
+                bytesWritten += size;
 
-            ByteBuf src2 = ByteBufAllocator.DEFAULT.buffer(4);
-            src2.writeBytes(randomBytes(4));
-            bc.write(src2);
-            Assertions.assertTrue(bc.getUnpersistedBytes() < unpersistedBytesBound);
-            verify(mock, never()).force(anyBoolean());
-
-            ByteBuf src3 = ByteBufAllocator.DEFAULT.buffer(4);
-            src3.writeBytes(randomBytes(4));
-            bc.write(src3);
-
-            Assertions.assertTrue(bc.getFileChannelPosition() > 0);
-            verify(mock, times(1)).force(anyBoolean());
+                if (unpersistedBytes < unpersistedBytesBound) {
+                    Assertions.assertTrue(bc.getUnpersistedBytes() < unpersistedBytesBound);
+                } else {
+                    forceCount++;
+                    unpersistedBytes -= unpersistedBytesBound;
+                    flushedBytes = bytesWritten;
+                }
+                verify(mock, times(forceCount)).force(anyBoolean());
+                src.release();
+            }
+            if (forceCount > 0) {
+                byte[] actual = Files.readAllBytes(path);
+                Assertions.assertArrayEquals(data, Arrays.copyOfRange(actual, 0, flushedBytes));
+            }
         } finally {
             Files.delete(path);
         }
@@ -284,6 +272,37 @@ public class BufferedChannelWriteTest {
                 Assertions.assertEquals(data[i], actual.getByte(i));
             }
             src.release();
+            actual.release();
+        } finally {
+            Files.delete(path);
+        }
+    }
+
+    @Test
+    public void writeCapacityBoundaryTest() throws IOException {
+        Path path = TemporaryFile.create("file", "rw-rw-r--");
+        int capacity = 10;
+        try (FileChannel fc = FileChannel.open(path, setOf(StandardOpenOption.WRITE, StandardOpenOption.READ));
+             BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, fc, capacity)) {
+            byte[] data1 = randomBytes(capacity);
+            ByteBuf src1 = ByteBufAllocator.DEFAULT.buffer(capacity);
+            src1.writeBytes(data1);
+            bc.write(src1);
+
+            Assertions.assertEquals(capacity, bc.position());
+
+            byte[] data2 = randomBytes(1);
+            ByteBuf src2 = ByteBufAllocator.DEFAULT.buffer(1);
+            src2.writeBytes(data2);
+            bc.write(src2);
+
+            Assertions.assertEquals(capacity + 1, bc.position());
+
+            ByteBuf actual = ByteBufAllocator.DEFAULT.buffer(capacity + 1);
+            bc.read(actual, 0);
+            Assertions.assertEquals(capacity + 1, actual.readableBytes());
+            src1.release();
+            src2.release();
             actual.release();
         } finally {
             Files.delete(path);
