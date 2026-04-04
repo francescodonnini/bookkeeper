@@ -449,8 +449,8 @@
               </targetClasses>
               <targetTests>
                 <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCachePutTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelReadTest</targetTest>
                 <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteTest</targetTest>
+                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteGeminiTest</targetTest>
               </targetTests>
             </configuration>
           </plugin>
@@ -482,7 +482,7 @@
               </targetClasses>
               <targetTests>
                 <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelReadTest</targetTest>
+                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteGeminiTest</targetTest>
               </targetTests>
             </configuration>
           </plugin>
