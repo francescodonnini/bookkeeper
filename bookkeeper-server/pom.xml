@@ -24,6 +24,7 @@
   </parent>
   <artifactId>bookkeeper-server</artifactId>
   <name>Apache BookKeeper :: Server</name>
+
   <dependencies>
     <dependency>
       <groupId>org.apache.bookkeeper</groupId>
@@ -237,6 +238,13 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Source: https://mvnrepository.com/artifact/org.evosuite.plugins/evosuite-maven-plugin -->
+    <dependency>
+      <groupId>org.evosuite.plugins</groupId>
+      <artifactId>evosuite-maven-plugin</artifactId>
+      <version>1.0.6</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -323,97 +331,97 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>11</source>
-          <target>11</target>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
 
-      <!-- RANDOOP -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>download-randoop</id>
-            <phase>generate-sources</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <mkdir dir="${project.build.directory}/randoop-lib" />
-                <get src="https://github.com/randoop/randoop/releases/download/v4.3.3/randoop-all-4.3.3.jar"
-                     dest="${project.build.directory}/randoop-lib/randoop-all.jar"
-                     usetimestamp="true" />
-              </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.6.1</version>
-        <executions>
-          <execution>
-            <id>build-classpath</id>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>build-classpath</goal>
-            </goals>
-            <configuration>
-              <outputProperty>project.runtime.classpath</outputProperty>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>build-helper-maven-plugin</artifactId>
-        <version>3.3.0</version>
-        <executions>
-          <execution>
-            <id>add-test-source</id>
-            <phase>generate-test-sources</phase>
-            <goals>
-              <goal>add-test-source</goal>
-            </goals>
-            <configuration>
-              <sources>
-                <source>${project.build.directory}/generated-test-sources/randoop</source>
-              </sources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>3.1.0</version>
-        <executions>
-          <execution>
-            <id>generate-randoop-tests</id>
-            <phase>process-classes</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>java</executable>
-              <arguments>
-                <argument>-classpath</argument>
-                <argument>${project.build.directory}/randoop-lib/randoop-all.jar:${project.build.outputDirectory}:${project.runtime.classpath}</argument>
-                <argument>randoop.main.Main</argument>
-                <argument>gentests</argument>
-                <argument>--testclass=org.apache.bookkeeper.bookie.BufferedChannel</argument>
-                <argument>--testclass=org.apache.bookkeeper.bookie.storage.ldb.WriteCache</argument>
-                <argument>--junit-output-dir=${project.build.directory}/generated-test-sources/randoop</argument>
-                <argument>--time-limit=15</argument>
-              </arguments>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
+<!--      &lt;!&ndash; RANDOOP &ndash;&gt;-->
+<!--      <plugin>-->
+<!--        <groupId>org.apache.maven.plugins</groupId>-->
+<!--        <artifactId>maven-antrun-plugin</artifactId>-->
+<!--        <version>3.1.0</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>download-randoop</id>-->
+<!--            <phase>generate-sources</phase>-->
+<!--            <goals>-->
+<!--              <goal>run</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <target>-->
+<!--                <mkdir dir="${project.build.directory}/randoop-lib" />-->
+<!--                <get src="https://github.com/randoop/randoop/releases/download/v4.3.3/randoop-all-4.3.3.jar"-->
+<!--                     dest="${project.build.directory}/randoop-lib/randoop-all.jar"-->
+<!--                     usetimestamp="true" />-->
+<!--              </target>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <groupId>org.apache.maven.plugins</groupId>-->
+<!--        <artifactId>maven-dependency-plugin</artifactId>-->
+<!--        <version>3.6.1</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>build-classpath</id>-->
+<!--            <phase>process-classes</phase>-->
+<!--            <goals>-->
+<!--              <goal>build-classpath</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <outputProperty>project.runtime.classpath</outputProperty>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>build-helper-maven-plugin</artifactId>-->
+<!--        <version>3.3.0</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>add-test-source</id>-->
+<!--            <phase>generate-test-sources</phase>-->
+<!--            <goals>-->
+<!--              <goal>add-test-source</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <sources>-->
+<!--                <source>${project.build.directory}/generated-test-sources/randoop</source>-->
+<!--              </sources>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
+<!--      <plugin>-->
+<!--        <groupId>org.codehaus.mojo</groupId>-->
+<!--        <artifactId>exec-maven-plugin</artifactId>-->
+<!--        <version>3.1.0</version>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>generate-randoop-tests</id>-->
+<!--            <phase>process-classes</phase>-->
+<!--            <goals>-->
+<!--              <goal>exec</goal>-->
+<!--            </goals>-->
+<!--            <configuration>-->
+<!--              <executable>java</executable>-->
+<!--              <arguments>-->
+<!--                <argument>-classpath</argument>-->
+<!--                <argument>${project.build.directory}/randoop-lib/randoop-all.jar:${project.build.outputDirectory}:${project.runtime.classpath}</argument>-->
+<!--                <argument>randoop.main.Main</argument>-->
+<!--                <argument>gentests</argument>-->
+<!--                <argument>&#45;&#45;testclass=org.apache.bookkeeper.bookie.BufferedChannel</argument>-->
+<!--                <argument>&#45;&#45;testclass=org.apache.bookkeeper.bookie.storage.ldb.WriteCache</argument>-->
+<!--                <argument>&#45;&#45;junit-output-dir=${project.build.directory}/generated-test-sources/randoop</argument>-->
+<!--                <argument>&#45;&#45;time-limit=15</argument>-->
+<!--              </arguments>-->
+<!--            </configuration>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--      </plugin>-->
     </plugins>
   </build>
   <profiles>
@@ -614,6 +622,164 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+
+    <!-- RANDOOP -->
+    <profile>
+      <id>randoop</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>download-randoop</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <mkdir dir="${project.build.directory}/randoop-lib" />
+                    <get src="https://github.com/randoop/randoop/releases/download/v4.3.3/randoop-all-4.3.3.jar"
+                         dest="${project.build.directory}/randoop-lib/randoop-all.jar"
+                         usetimestamp="true" />
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-dependency-plugin</artifactId>
+            <version>3.6.1</version>
+            <executions>
+              <execution>
+                <id>build-classpath</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>build-classpath</goal>
+                </goals>
+                <configuration>
+                  <outputProperty>project.runtime.classpath</outputProperty>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.3.0</version>
+            <executions>
+              <execution>
+                <id>add-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.build.directory}/generated-test-sources/randoop</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>generate-randoop-tests</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>java</executable>
+                  <arguments>
+                    <argument>-classpath</argument>
+                    <argument>${project.build.directory}/randoop-lib/randoop-all.jar:${project.build.outputDirectory}:${project.runtime.classpath}</argument>
+                    <argument>randoop.main.Main</argument>
+                    <argument>gentests</argument>
+                    <argument>--testclass=org.apache.bookkeeper.bookie.BufferedChannel</argument>
+                    <argument>--testclass=org.apache.bookkeeper.bookie.storage.ldb.WriteCache</argument>
+                    <argument>--junit-output-dir=${project.build.directory}/generated-test-sources/randoop</argument>
+                    <argument>--time-limit=15</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- EVO SUITE -->
+    <profile>
+      <id>evosuite</id>
+      <properties>
+        <evosuite.target.classes>org.apache.bookkeeper.bookie.BufferedChannel,org.apache.bookkeeper.bookie.storage.ldb.WriteCache</evosuite.target.classes>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.evosuite.plugins</groupId>
+            <artifactId>evosuite-maven-plugin</artifactId>
+            <version>1.0.6</version>
+            <configuration>
+              <cuts>${evosuite.target.classes}</cuts>
+              <memoryInMB>2000</memoryInMB>
+              <targetFolder>${project.build.directory}/generated-test-sources/evosuite</targetFolder>
+              <extraArgs> -Dsandbox=false -Duse_separate_classloader=false </extraArgs>
+            </configuration>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.3.0</version>
+            <executions>
+              <execution>
+                <id>add-evosuite-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.build.directory}/generated-test-sources/evosuite</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <properties>
+                <property>
+                  <name>listener</name>
+                  <value>org.evosuite.runtime.InitializingListener</value>
+                </property>
+              </properties>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+      <dependencies>
+        <dependency>
+          <groupId>org.evosuite</groupId>
+          <artifactId>evosuite-standalone-runtime</artifactId>
+          <version>1.0.6</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>
