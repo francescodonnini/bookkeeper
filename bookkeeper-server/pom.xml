@@ -238,13 +238,6 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
-    <!-- Source: https://mvnrepository.com/artifact/org.evosuite.plugins/evosuite-maven-plugin -->
-    <dependency>
-      <groupId>org.evosuite.plugins</groupId>
-      <artifactId>evosuite-maven-plugin</artifactId>
-      <version>1.0.6</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -716,70 +709,6 @@
           </plugin>
         </plugins>
       </build>
-    </profile>
-
-    <!-- EVO SUITE -->
-    <profile>
-      <id>evosuite</id>
-      <properties>
-        <evosuite.target.classes>org.apache.bookkeeper.bookie.BufferedChannel,org.apache.bookkeeper.bookie.storage.ldb.WriteCache</evosuite.target.classes>
-      </properties>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.evosuite.plugins</groupId>
-            <artifactId>evosuite-maven-plugin</artifactId>
-            <version>1.0.6</version>
-            <configuration>
-              <cuts>${evosuite.target.classes}</cuts>
-              <memoryInMB>2000</memoryInMB>
-              <targetFolder>${project.build.directory}/generated-test-sources/evosuite</targetFolder>
-              <extraArgs> -Dsandbox=false -Duse_separate_classloader=false </extraArgs>
-            </configuration>
-          </plugin>
-
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <version>3.3.0</version>
-            <executions>
-              <execution>
-                <id>add-evosuite-test-source</id>
-                <phase>generate-test-sources</phase>
-                <goals>
-                  <goal>add-test-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.build.directory}/generated-test-sources/evosuite</source>
-                  </sources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <properties>
-                <property>
-                  <name>listener</name>
-                  <value>org.evosuite.runtime.InitializingListener</value>
-                </property>
-              </properties>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-      <dependencies>
-        <dependency>
-          <groupId>org.evosuite</groupId>
-          <artifactId>evosuite-standalone-runtime</artifactId>
-          <version>1.0.6</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
     </profile>
   </profiles>
 </project>
