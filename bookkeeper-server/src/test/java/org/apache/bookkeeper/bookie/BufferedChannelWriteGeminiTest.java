@@ -29,8 +29,8 @@ public class BufferedChannelWriteGeminiTest {
 
     @Test
     public void testWriteExactBufferCapacity() throws IOException {
-        try (FileChannel fc = createTempFileChannel();
-             FileChannel spyFc = spy(fc);
+        FileChannel fc = createTempFileChannel();
+        try (FileChannel spyFc = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, spyFc, 10, 0L)) {
 
             ByteBuf data = ByteBufAllocator.DEFAULT.buffer(10);
@@ -50,8 +50,8 @@ public class BufferedChannelWriteGeminiTest {
 
     @Test
     public void testWriteExceedingBufferCapacity() throws IOException {
-        try (FileChannel fc = createTempFileChannel();
-             FileChannel spyFc = spy(fc);
+        FileChannel fc = createTempFileChannel();
+        try (FileChannel spyFc = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, spyFc, 10, 0L)) {
 
             ByteBuf data = ByteBufAllocator.DEFAULT.buffer(15);
@@ -69,8 +69,8 @@ public class BufferedChannelWriteGeminiTest {
 
     @Test
     public void testNoForceWriteWhenBoundIsZero() throws IOException {
-        try (FileChannel fc = createTempFileChannel();
-             FileChannel spyFc = spy(fc);
+        FileChannel fc = createTempFileChannel();
+        try (FileChannel spyFc = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, spyFc, 10, 0L)) {
 
             ByteBuf data = ByteBufAllocator.DEFAULT.buffer(50);
@@ -90,8 +90,8 @@ public class BufferedChannelWriteGeminiTest {
 
     @Test
     public void testWriteExactUnpersistedBytesBound() throws IOException {
-        try (FileChannel fc = createTempFileChannel();
-             FileChannel spyFc = spy(fc);
+        FileChannel fc = createTempFileChannel();
+        try (FileChannel spyFc = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, spyFc, 50, 10L)) {
 
             ByteBuf data = ByteBufAllocator.DEFAULT.buffer(10);
@@ -109,8 +109,8 @@ public class BufferedChannelWriteGeminiTest {
 
     @Test
     public void testWriteLargePayloadTriggersOneForceWrite() throws IOException {
-        try (FileChannel fc = createTempFileChannel();
-             FileChannel spyFc = spy(fc);
+        FileChannel fc = createTempFileChannel();
+        try (FileChannel spyFc = spy(fc);
              BufferedChannel bc = new BufferedChannel(ByteBufAllocator.DEFAULT, spyFc, 10, 20L)) {
 
             ByteBuf data = ByteBufAllocator.DEFAULT.buffer(55);
