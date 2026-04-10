@@ -611,7 +611,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <argLine>-Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
+              <argLine>@{argLine} -Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
             </configuration>
           </plugin>
         </plugins>

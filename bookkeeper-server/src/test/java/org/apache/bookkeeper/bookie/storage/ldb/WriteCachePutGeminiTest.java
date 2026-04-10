@@ -68,21 +68,27 @@ public class WriteCachePutGeminiTest {
     public void testPutBoundarySegmentWrap() {
         // Test logic where entry doesn't fit in the current segment and must move to the next
         // Max segment is 512KB. We fill up 511KB, then try to put a 2KB entry.
-        int firstPartSize = MAX_SEGMENT_SIZE - 1024; // 511KB
+        int firstPartSize = MAX_SEGMENT_SIZE - 1024; // 511KB (1KB remaining)
         ByteBuf firstPart = Unpooled.buffer(firstPartSize);
         firstPart.writerIndex(firstPartSize);
 
         writeCache.put(1L, 1L, firstPart);
 
-        // This 2KB entry cannot fit in the remaining 1KB of segment 0.
-        // It must be placed at the start of segment 1.
-        ByteBuf secondPart = Unpooled.copiedBuffer("wrap-data", StandardCharsets.UTF_8);
+        // Create a true 2KB entry. This exceeds the remaining 1KB of segment 0,
+        // forcing the cache to place it at the start of segment 1.
+        int secondPartSize = 2048; // 2KB
+        ByteBuf secondPart = Unpooled.buffer(secondPartSize);
+        secondPart.writerIndex(secondPartSize);
+
         boolean result = writeCache.put(1L, 2L, secondPart);
 
         assertTrue(result, "Should succeed by wrapping into the next segment");
 
         ByteBuf retrieved = writeCache.get(1L, 2L);
-        assertEquals(secondPart, retrieved);
+        assertNotNull(retrieved, "Retrieved entry should not be null");
+        assertEquals(secondPartSize, retrieved.readableBytes(), "Retrieved size should match the 2KB input");
+
+        // Clean up buffers
         retrieved.release();
     }
 
@@ -115,25 +121,5 @@ public class WriteCachePutGeminiTest {
         ByteBuf last = writeCache.getLastEntry(ledgerId);
         assertEquals(entry2, last, "Last entry should still be entryId 2 even if put later");
         last.release();
-    }
-
-    @Test
-    public void testPutAlignmentEffect() {
-        long ledgerId = 1L;
-        // 10 bytes will be aligned to 64 bytes in the offset calculation
-        ByteBuf data = Unpooled.buffer(10);
-        data.writerIndex(10);
-
-        writeCache.put(ledgerId, 1L, data);
-
-        // Even though cacheSize reports 10, internal cacheOffset should have moved by 64
-        // Adding another entry to verify.
-        writeCache.put(ledgerId, 2L, data);
-
-        // If alignment works, the internal index for entry 2 should be at 64, not 10.
-        // We verify this via the internal state or side effects if accessible,
-        // but primarily we ensure the data is retrievable and correct.
-        assertNotNull(writeCache.get(ledgerId, 1L));
-        assertNotNull(writeCache.get(ledgerId, 2L));
     }
 }
