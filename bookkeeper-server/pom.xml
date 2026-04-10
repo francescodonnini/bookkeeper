@@ -328,93 +328,6 @@
           <target>1.8</target>
         </configuration>
       </plugin>
-
-<!--      &lt;!&ndash; RANDOOP &ndash;&gt;-->
-<!--      <plugin>-->
-<!--        <groupId>org.apache.maven.plugins</groupId>-->
-<!--        <artifactId>maven-antrun-plugin</artifactId>-->
-<!--        <version>3.1.0</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>download-randoop</id>-->
-<!--            <phase>generate-sources</phase>-->
-<!--            <goals>-->
-<!--              <goal>run</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <target>-->
-<!--                <mkdir dir="${project.build.directory}/randoop-lib" />-->
-<!--                <get src="https://github.com/randoop/randoop/releases/download/v4.3.3/randoop-all-4.3.3.jar"-->
-<!--                     dest="${project.build.directory}/randoop-lib/randoop-all.jar"-->
-<!--                     usetimestamp="true" />-->
-<!--              </target>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
-<!--      <plugin>-->
-<!--        <groupId>org.apache.maven.plugins</groupId>-->
-<!--        <artifactId>maven-dependency-plugin</artifactId>-->
-<!--        <version>3.6.1</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>build-classpath</id>-->
-<!--            <phase>process-classes</phase>-->
-<!--            <goals>-->
-<!--              <goal>build-classpath</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <outputProperty>project.runtime.classpath</outputProperty>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
-<!--      <plugin>-->
-<!--        <groupId>org.codehaus.mojo</groupId>-->
-<!--        <artifactId>build-helper-maven-plugin</artifactId>-->
-<!--        <version>3.3.0</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>add-test-source</id>-->
-<!--            <phase>generate-test-sources</phase>-->
-<!--            <goals>-->
-<!--              <goal>add-test-source</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <sources>-->
-<!--                <source>${project.build.directory}/generated-test-sources/randoop</source>-->
-<!--              </sources>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
-<!--      <plugin>-->
-<!--        <groupId>org.codehaus.mojo</groupId>-->
-<!--        <artifactId>exec-maven-plugin</artifactId>-->
-<!--        <version>3.1.0</version>-->
-<!--        <executions>-->
-<!--          <execution>-->
-<!--            <id>generate-randoop-tests</id>-->
-<!--            <phase>process-classes</phase>-->
-<!--            <goals>-->
-<!--              <goal>exec</goal>-->
-<!--            </goals>-->
-<!--            <configuration>-->
-<!--              <executable>java</executable>-->
-<!--              <arguments>-->
-<!--                <argument>-classpath</argument>-->
-<!--                <argument>${project.build.directory}/randoop-lib/randoop-all.jar:${project.build.outputDirectory}:${project.runtime.classpath}</argument>-->
-<!--                <argument>randoop.main.Main</argument>-->
-<!--                <argument>gentests</argument>-->
-<!--                <argument>&#45;&#45;testclass=org.apache.bookkeeper.bookie.BufferedChannel</argument>-->
-<!--                <argument>&#45;&#45;testclass=org.apache.bookkeeper.bookie.storage.ldb.WriteCache</argument>-->
-<!--                <argument>&#45;&#45;junit-output-dir=${project.build.directory}/generated-test-sources/randoop</argument>-->
-<!--                <argument>&#45;&#45;time-limit=15</argument>-->
-<!--              </arguments>-->
-<!--            </configuration>-->
-<!--          </execution>-->
-<!--        </executions>-->
-<!--      </plugin>-->
     </plugins>
   </build>
   <profiles>
@@ -472,8 +385,7 @@
         </plugins>
       </build>
     </profile>
-
-    <!-- Jacoco -->
+    <!-- JaCoCo -->
     <profile>
       <id>jacoco</id>
       <build>
@@ -491,7 +403,6 @@
                   <destFile>${project.build.directory}/jacoco.exec</destFile>
                 </configuration>
               </execution>
-              <!-- attached to Maven test phase -->
               <execution>
                 <id>report</id>
                 <phase>test</phase>
@@ -510,12 +421,14 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
               <argLine>@{argLine}</argLine>
+              <excludes>
+                <exclude>**/ErrorTest*</exclude>
+              </excludes>
             </configuration>
           </plugin>
         </plugins>
       </build>
     </profile>
-
     <!-- PIT -->
     <profile>
       <id>pit</id>
@@ -524,7 +437,7 @@
           <plugin>
             <groupId>org.pitest</groupId>
             <artifactId>pitest-maven</artifactId>
-            <version>1.22.0</version>
+            <version>1.14.4</version>
             <dependencies>
               <dependency>
                 <groupId>org.pitest</groupId>
@@ -537,9 +450,10 @@
                 <targetClass>org.apache.bookkeeper.bookie.BufferedChannel</targetClass>
               </targetClasses>
               <targetTests>
-                <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCachePutTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteGeminiTest</targetTest>
+                <targetTest>org.apache.bookkeeper.bookie.BufferedChannel*Test</targetTest>
+                <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCache*Test</targetTest>
+                <targetTest>*RegressionTest*</targetTest>
+                <targetTest>*_ESTest</targetTest>
               </targetTests>
             </configuration>
           </plugin>
@@ -550,73 +464,6 @@
         </plugins>
       </build>
     </profile>
-
-    <!-- PIT for BufferedChannel only -->
-    <profile>
-      <id>pitb</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.pitest</groupId>
-            <artifactId>pitest-maven</artifactId>
-            <version>1.22.0</version>
-            <dependencies>
-              <dependency>
-                <groupId>org.pitest</groupId>
-                <artifactId>pitest-junit5-plugin</artifactId>
-                <version>1.2.1</version> </dependency>
-            </dependencies>
-            <configuration>
-              <targetClasses>
-                <targetClass>org.apache.bookkeeper.bookie.BufferedChannel</targetClass>
-              </targetClasses>
-              <targetTests>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.BufferedChannelWriteGeminiTest</targetTest>
-              </targetTests>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
-    <!-- PIT for WriteCache only -->
-    <profile>
-      <id>pitw</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.pitest</groupId>
-            <artifactId>pitest-maven</artifactId>
-            <version>1.22.0</version>
-            <dependencies>
-              <dependency>
-                <groupId>org.pitest</groupId>
-                <artifactId>pitest-junit5-plugin</artifactId>
-                <version>1.2.1</version> </dependency>
-            </dependencies>
-            <configuration>
-              <targetClasses>
-                <targetClass>org.apache.bookkeeper.bookie.storage.ldb.WriteCache</targetClass>
-              </targetClasses>
-              <targetTests>
-                <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCachePutTest</targetTest>
-                <targetTest>org.apache.bookkeeper.bookie.storage.ldb.WriteCacheForEachOrderedTest</targetTest>
-              </targetTests>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-
     <!-- RANDOOP -->
     <profile>
       <id>randoop</id>
@@ -706,6 +553,66 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <!-- EvoSuite -->
+    <profile>
+      <id>evosuite</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.evosuite</groupId>
+          <artifactId>evosuite-standalone-runtime</artifactId>
+          <version>1.0.6</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.evosuite.plugins</groupId>
+            <artifactId>evosuite-maven-plugin</artifactId>
+            <version>1.0.6</version>
+            <executions>
+              <execution>
+                <id>generate-evosuite-tests</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>generate</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <memoryInMB>4000</memoryInMB>
+              <cuts>org.apache.bookkeeper.bookie.BufferedChannel,org.apache.bookkeeper.bookie.storage.ldb.WriteCache</cuts>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.3.0</version>
+            <executions>
+              <execution>
+                <id>add-evosuite-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/.evosuite/best-tests</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <argLine>-Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
+            </configuration>
           </plugin>
         </plugins>
       </build>
