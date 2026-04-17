@@ -427,7 +427,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <argLine>@{argLine}</argLine>
+              <argLine>@{argLine} -Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
               <excludes>
                 <exclude>**/ErrorTest*</exclude>
               </excludes>
@@ -452,6 +452,11 @@
                 <version>1.2.1</version> </dependency>
             </dependencies>
             <configuration>
+              <jvmArgs>
+                <value>-Xmx4G</value>
+                <value>-XX:MaxDirectMemorySize=4G</value>
+                <value>-Devosuite.runtime.sandbox.enabled=false</value>
+              </jvmArgs>
               <targetClasses>
                 <targetClass>org.apache.bookkeeper.bookie.storage.ldb.WriteCache</targetClass>
                 <targetClass>org.apache.bookkeeper.bookie.BufferedChannel</targetClass>

@@ -21,14 +21,10 @@ jobs:
       - name: Build with Maven
         run: mvn clean install -DskipTests
 
-      - name: JaCoCo
-        run: mvn test -Pjacoco -pl bookkeeper-server
-
-      - name: PIT
-        run: mvn org.pitest:pitest-maven:mutationCoverage -Ppit -pl bookkeeper-server
-
-      - name: Randoop
-        run: mvn test -Prandoop -pl bookkeeper-server
-
-      - name: EvoSuite
-        run: mvn test -Pevosuite -pl bookkeeper-server
+      - name: Generate, Test, Coverage, and Mutate
+          # This single command sequentially runs the lifecycle up to 'test' (which includes generation and JaCoCo),
+          # then executes the JaCoCo report, and finally runs PIT mutation testing.
+        run: >
+          mvn test jacoco:report org.pitest:pitest-maven:mutationCoverage 
+          -Pjacoco,pit,randoop,evosuite 
+          -pl bookkeeper-server
