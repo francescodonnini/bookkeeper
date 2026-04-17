@@ -22,9 +22,26 @@ jobs:
         run: mvn clean install -DskipTests
 
       - name: Generate, Test, Coverage, and Mutate
-          # This single command sequentially runs the lifecycle up to 'test' (which includes generation and JaCoCo),
-          # then executes the JaCoCo report, and finally runs PIT mutation testing.
         run: >
           mvn test jacoco:report org.pitest:pitest-maven:mutationCoverage 
           -Pjacoco,pit,randoop,evosuite 
           -pl bookkeeper-server
+
+      - name: Upload JaCoCo and PIT reports
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: test-reports
+          path: |
+            bookkeeper-server/target/site/jacoco
+            bookkeeper-server/target/pit-reports
+            bookkeeper-server/test-classes/evosuite-report
+
+      - name: Upload Auto-generated Tests
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: auto-generated-tests
+          path: |
+            bookkeeper-server/target/generated-test-sources/randoop
+            bookkeeper-server/.evosuite/best-tests
