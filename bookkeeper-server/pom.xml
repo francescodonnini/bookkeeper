@@ -238,6 +238,13 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
+
+    <dependency>
+      <groupId>org.evosuite</groupId>
+      <artifactId>evosuite-standalone-runtime</artifactId>
+      <version>1.0.6</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -560,14 +567,6 @@
     <!-- EvoSuite -->
     <profile>
       <id>evosuite</id>
-      <dependencies>
-        <dependency>
-          <groupId>org.evosuite</groupId>
-          <artifactId>evosuite-standalone-runtime</artifactId>
-          <version>1.0.6</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
