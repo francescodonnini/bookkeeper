@@ -581,7 +581,7 @@
               <excludes>
                 <exclude>none</exclude>
               </excludes>
-              <argLine>-Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
+              <argLine>-Xmx2G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
             </configuration>
           </plugin>
         </plugins>
