@@ -238,13 +238,6 @@
       <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
-
-    <dependency>
-      <groupId>org.evosuite</groupId>
-      <artifactId>evosuite-standalone-runtime</artifactId>
-      <version>1.0.6</version>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
@@ -427,7 +420,7 @@
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
             <configuration>
-              <argLine>@{argLine} -Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
+              <argLine>@{argLine}</argLine>
               <excludes>
                 <exclude>**/ErrorTest*</exclude>
               </excludes>
@@ -452,11 +445,6 @@
                 <version>1.2.1</version> </dependency>
             </dependencies>
             <configuration>
-              <jvmArgs>
-                <value>-Xmx4G</value>
-                <value>-XX:MaxDirectMemorySize=4G</value>
-                <value>-Devosuite.runtime.sandbox.enabled=false</value>
-              </jvmArgs>
               <targetClasses>
                 <targetClass>org.apache.bookkeeper.bookie.storage.ldb.WriteCache</targetClass>
                 <targetClass>org.apache.bookkeeper.bookie.BufferedChannel</targetClass>
@@ -565,58 +553,6 @@
                 </configuration>
               </execution>
             </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <!-- EvoSuite -->
-    <profile>
-      <id>evosuite</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.evosuite.plugins</groupId>
-            <artifactId>evosuite-maven-plugin</artifactId>
-            <version>1.0.6</version>
-            <executions>
-              <execution>
-                <id>generate-evosuite-tests</id>
-                <phase>process-classes</phase>
-                <goals>
-                  <goal>generate</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-              <memoryInMB>4000</memoryInMB>
-              <cuts>org.apache.bookkeeper.bookie.BufferedChannel,org.apache.bookkeeper.bookie.storage.ldb.WriteCache</cuts>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>build-helper-maven-plugin</artifactId>
-            <version>3.3.0</version>
-            <executions>
-              <execution>
-                <id>add-evosuite-test-source</id>
-                <phase>generate-test-sources</phase>
-                <goals>
-                  <goal>add-test-source</goal>
-                </goals>
-                <configuration>
-                  <sources>
-                    <source>${project.basedir}/.evosuite/best-tests</source>
-                  </sources>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-              <argLine>-Xmx4G -XX:MaxDirectMemorySize=4G -Devosuite.runtime.sandbox.enabled=false</argLine>
-            </configuration>
           </plugin>
         </plugins>
       </build>

@@ -24,7 +24,7 @@ jobs:
       - name: Generate, Test, Coverage, and Mutate
         run: >
           mvn test jacoco:report org.pitest:pitest-maven:mutationCoverage 
-          -Pjacoco,pit,randoop,evosuite 
+          -Pjacoco,pit,randoop 
           -pl bookkeeper-server
 
       - name: Upload JaCoCo and PIT reports
@@ -35,7 +35,6 @@ jobs:
           path: |
             bookkeeper-server/target/site/jacoco
             bookkeeper-server/target/pit-reports
-            bookkeeper-server/test-classes/evosuite-report
 
       - name: Upload Auto-generated Tests
         uses: actions/upload-artifact@v4
@@ -44,7 +43,3 @@ jobs:
           name: auto-generated-tests
           path: |
             bookkeeper-server/target/generated-test-sources/randoop
-            bookkeeper-server/target/test-classes/evosuite-report
-            bookkeeper-server/target/test-classes/org/apache/bookkeeper/bookie/*ESTest*
-            bookkeeper-server/target/test-classes/org/apache/bookkeeper/bookie/storage/ldb/*ESTest*
-            bookkeeper-server/.evosuite/
