@@ -44,4 +44,7 @@ jobs:
           name: auto-generated-tests
           path: |
             bookkeeper-server/target/generated-test-sources/randoop
-            bookkeeper-server/.evosuite/best-tests
+            bookkeeper-server/target/test-classes/evosuite-report
+            bookkeeper-server/target/test-classes/org/apache/bookkeeper/bookie/*ESTest*
+            bookkeeper-server/target/test-classes/org/apache/bookkeeper/bookie/storage/ldb/*ESTest*
+            bookkeeper-server/.evosuite/
