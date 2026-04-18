@@ -590,10 +590,7 @@
             <configuration>
               <memoryInMB>4000</memoryInMB>
               <cuts>org.apache.bookkeeper.bookie.BufferedChannel,org.apache.bookkeeper.bookie.storage.ldb.WriteCache</cuts>
-              <extraArgs>
-                <arg>-Duse_SECURITY_MANAGER=false</arg>
-                <arg>-Dsandbox=false</arg>
-              </extraArgs>
+              <extraArgs>-Duse_SECURITY_MANAGER=false -Dsandbox=false</extraArgs>
             </configuration>
           </plugin>
           <plugin>
